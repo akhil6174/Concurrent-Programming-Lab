@@ -1,0 +1,33 @@
+from numba import cuda
+import numpy as np
+
+@cuda.jit
+def reduce_max(arr):
+    tid = cuda.threadIdx.x
+    stride = 1
+
+    while stride < cuda.blockDim.x:
+        index = 2 * stride * tid
+
+        if index < cuda.blockDim.x:
+            arr[index] = max(arr[index],
+                             arr[index + stride])
+
+        cuda.syncthreads()
+        stride *= 2
+
+
+# Input Array
+data = np.array([5, 2, 9, 1, 7, 4, 8, 3],
+                dtype=np.int32)
+
+# Copy to GPU
+d_data = cuda.to_device(data)
+
+# Launch kernel
+reduce_max[1, len(data)](d_data)
+
+# Copy back
+result = d_data.copy_to_host()
+
+print("Maximum Element:", result[0])
