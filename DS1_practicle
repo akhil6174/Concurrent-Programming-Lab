@@ -1,0 +1,45 @@
+from numba import cuda
+import numpy as np
+
+# CUDA Kernel
+@cuda.jit
+def vector_multiply(a, b, c):
+    idx = cuda.grid(1)
+
+    if idx < a.size:
+        c[idx] = a[idx] * b[idx]
+
+
+# Vector Size
+N = 1024
+
+# Input vectors
+A = np.random.randint(1, 10, N).astype(np.float32)
+B = np.random.randint(1, 10, N).astype(np.float32)
+
+# Output vector
+C = np.zeros(N, dtype=np.float32)
+
+# Copy data to GPU
+d_A = cuda.to_device(A)
+d_B = cuda.to_device(B)
+d_C = cuda.device_array(N)
+
+# Threads and Blocks
+threads_per_block = 256
+blocks_per_grid = (N + threads_per_block - 1) // threads_per_block
+
+# Launch Kernel
+vector_multiply[blocks_per_grid, threads_per_block](d_A, d_B, d_C)
+
+# Copy result back
+C = d_C.copy_to_host()
+
+print("Vector A:")
+print(A[:10])
+
+print("\nVector B:")
+print(B[:10])
+
+print("\nResult (A * B):")
+print(C[:10])
